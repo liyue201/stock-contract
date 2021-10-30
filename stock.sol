@@ -85,13 +85,10 @@ contract ERC20Token is IERC20 {
 
     address public m_token;
     address public m_owner;
+
     
-    uint256 private m_totalTokens;
-    
-    event Mint(address indexed sender, uint value);
-    event Burn(address indexed sender, uint value);
-    event Share(uint value);
-    
+    event Mint(address indexed sender, uint lpAmount, uint tokenAmount);
+    event Burn(address indexed sender, uint lpAmount, uint tokenAmount);
 
     constructor(address token)  {
         m_token = token;
@@ -99,55 +96,45 @@ contract ERC20Token is IERC20 {
         m_symbol = "LP";
         m_totalSupply = 0;
         m_owner = msg.sender;
-        emit Transfer(address(0), m_owner, m_totalSupply);
     }
-    
+
+    function totalToken() public view returns(uint) {
+        return IERC20(m_token).balanceOf(address(this));
+    }
+
     function mint(uint tokenAmount) public {
          require(tokenAmount > 0, "invalid tokenAmount");
-         require(IERC20(m_token).transferFrom(msg.sender, address(this), tokenAmount), "failed to Transfer token");
-         
-      
-         if (m_totalTokens == 0 || m_totalSupply == 0) {
-             m_balances[msg.sender] = tokenAmount;
-             m_totalSupply = tokenAmount;
-             m_totalTokens = tokenAmount;
-             
-             emit Mint(msg.sender, tokenAmount);
+        
+         uint lpAmount = 0;
+         if (m_totalSupply == 0 || totalToken() == 0) {
+             lpAmount = tokenAmount;
+             m_balances[msg.sender] = lpAmount;
+             m_totalSupply = lpAmount;
             
          }else {
-             uint lpAmountAdd = m_totalSupply.mul(tokenAmount).div(m_totalTokens);
-             m_balances[msg.sender] = m_balances[msg.sender].add(lpAmountAdd);
-             m_totalSupply = m_totalSupply.add(lpAmountAdd);
-             m_totalTokens = m_totalTokens.add(tokenAmount);
-             
-             emit Mint(msg.sender, lpAmountAdd);
+             lpAmount = m_totalSupply.mul(tokenAmount).div(totalToken());
+             m_balances[msg.sender] = m_balances[msg.sender].add(lpAmount);
+             m_totalSupply = m_totalSupply.add(lpAmount);
          }
-    
+         
+         require(IERC20(m_token).transferFrom(msg.sender, address(this), tokenAmount), "failed to Transfer token");
+         emit Mint(msg.sender, lpAmount, tokenAmount);
     }
     
     function burn(uint lpAmount) public {
          require(lpAmount > 0, "invalid lpAmount");
          require(lpAmount <= m_balances[msg.sender], "lpAmount exceed range");
            
-         uint tokenAmount = m_totalTokens.mul(lpAmount).div(m_totalSupply);
+         uint tokenAmount = totalToken().mul(lpAmount).div(m_totalSupply);
          
          m_balances[msg.sender] = m_balances[msg.sender].sub(lpAmount);
          m_totalSupply = m_totalSupply.sub(lpAmount);
-         m_totalTokens = m_totalTokens.sub(tokenAmount);
          
          require(IERC20(m_token).transfer(msg.sender, tokenAmount), "failed to Transfer token");
          
-         emit Burn(msg.sender, lpAmount);
+         emit Burn(msg.sender, lpAmount, tokenAmount);
     }
     
-    function share(uint tokenAmount) public {
-         require(tokenAmount > 0, "invalid lpAmount");
-         require(IERC20(m_token).transferFrom(msg.sender, address(this), tokenAmount), "failed to Transfer token");
-         m_totalTokens = m_totalTokens.add(tokenAmount);
-         
-         emit Share(tokenAmount);
-    }
-
     function name() public view override returns (string memory) {
         return m_name;
     }
