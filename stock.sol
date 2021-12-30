@@ -110,7 +110,6 @@ contract ERC20Token is IERC20 {
              lpAmount = tokenAmount;
              m_balances[msg.sender] = lpAmount;
              m_totalSupply = lpAmount;
-            
          }else {
              lpAmount = m_totalSupply.mul(tokenAmount).div(totalToken());
              m_balances[msg.sender] = m_balances[msg.sender].add(lpAmount);
@@ -118,6 +117,7 @@ contract ERC20Token is IERC20 {
          }
          
          require(IERC20(m_token).transferFrom(msg.sender, address(this), tokenAmount), "failed to Transfer token");
+         emit Transfer(address(0), msg.sender, lpAmount);
          emit Mint(msg.sender, lpAmount, tokenAmount);
     }
     
@@ -132,6 +132,7 @@ contract ERC20Token is IERC20 {
          
          require(IERC20(m_token).transfer(msg.sender, tokenAmount), "failed to Transfer token");
          
+         emit Transfer(msg.sender, address(0), lpAmount);
          emit Burn(msg.sender, lpAmount, tokenAmount);
     }
     
